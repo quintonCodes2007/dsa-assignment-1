@@ -1,0 +1,1 @@
+table<Asset> key(assetTag) assets = table [];
