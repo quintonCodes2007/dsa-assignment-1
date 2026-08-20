@@ -41,7 +41,7 @@ public type Asset record {
 
 
 type Loan record {
-    string loanId;
+    readonly string loanId;
     string assetTag;
     string borrower;
     string loanDate;
@@ -50,7 +50,7 @@ type Loan record {
 };
 
 type Booking record {
-    string bookingId;
+    readonly string bookingId;
     string assetTag;
     string booker;
     string date;
