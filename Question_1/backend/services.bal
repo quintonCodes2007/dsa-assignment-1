@@ -1,51 +1,75 @@
 import ballerina/http;
-import ballerina/time;
-import ballerina/lang.regexp;
 
+// ===============================
+// MAP DATABASE
+// assetTag is the unique key
+// ===============================
 
+map<Asset> assetDB = {};
 
-final regexp:RegExp SPACE_REGEX = re `\s+`;
+// ===============================
+// REST SERVICE
+// ===============================
 
-//this function creates a 3-letter code from the names of the different input strings
-function createCode(string value) returns string {
-    string cleaned = value.toUpperAscii();
-    cleaned = SPACE_REGEX.replaceAll(cleaned, "");
+service /asset on new http:Listener(8080) {
 
-    if cleaned.length() >= 3 {
-        return cleaned.substring(0, 4);
-    }
-    return cleaned;
-}
+    // ===========================
+    // CREATE ASSET
+    // POST /asset/assets
+    // ===========================
 
-//this function creates an asset tag from the previous functions codes
-function generateAssetTag(string institution, string site, string name) returns string {
-    string institutionCode = createCode(institution);
-    string siteCode = createCode(site);
-    string assetCode = createCode(name);
+    resource function post assets(@http:Payload Asset asset)
+            returns http:Created|http:BadRequest {
 
-    int count = 0;
-    foreach Asset asset in assets {
-        if asset.institution == institution &&
-           asset.site == site &&
-           asset.name == name {
-            count += 1;
+        if assetDB.hasKey(asset.assetTag) {
+            return http:BAD_REQUEST;
         }
-    }
-    count += 1;
 
-    string number = count.toString();
-    while number.length() < 3 {
-        number = "0" + number;
+        assetDB[asset.assetTag] = asset;
+
+        return http:CREATED;
     }
 
-    return institutionCode + "-" + siteCode + "-" + assetCode + "-" + number;
+    // ===========================
+    // VIEW ALL ASSETS
+    // GET /asset/assets
+    // ===========================
+
+    resource function get assets() returns Asset[] {
+        return assetDB.toArray();
+    }
+
+    // ===========================
+    // SEARCH ASSET
+    // GET /asset/assets/{assetTag}
+    // ===========================
+
+    resource function get assets/[string assetTag]()
+            returns Asset|http:NotFound {
+
+        Asset? asset = assetDB[assetTag];
+
+        if asset is Asset {
+            return asset;
+        }
+
+        return http:NOT_FOUND;
+    }
+
+    // ===========================
+    // DELETE ASSET
+    // DELETE /asset/assets/{assetTag}
+    // ===========================
+
+    resource function delete assets/[string assetTag]()
+            returns http:Ok|http:NotFound {
+
+        if !assetDB.hasKey(assetTag) {
+            return http:NOT_FOUND;
+        }
+
+        _ = assetDB.remove(assetTag);
+
+        return http:OK;
+    }
 }
-
-service /assets on new http:Listener(8080) {
-
-   
-
-}     
-
-
-
