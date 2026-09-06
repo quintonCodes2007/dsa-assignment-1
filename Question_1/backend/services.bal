@@ -2,32 +2,21 @@ import ballerina/http;
 import ballerina/time;
 import ballerina/uuid;
 
-type UpdateAssetRequest record {
-    string name?;
-    string description?;
-    string institution?;
-    string site?;
-    string status?;
-    string dateAcquired?;
-};
-
-type LoanRequest record {
-    string borrower;
-    string dueDate;
-};
-
-type BookRequest record {
-    string booker;
-    string date;
-    string time;
-};
-
-// ── Service ──
+// Reads a required string field from the request body, returning a 400 error if it is missing or not a string
+function requireString(json|error value, string fieldName) returns string|http:BadRequest {
+    if value is string {
+        return value;
+    }
+    http:BadRequest err = {
+        body: {"message": "'" + fieldName + "' is required and must be a string"}
+    };
+    return err;
+}
 
 service /assets on new http:Listener(8080) {
 
-    // PUT /assets/{assetTag} — Update an asset
-    resource function put [string assetTag](UpdateAssetRequest req) returns Asset|http:NotFound|http:BadRequest {
+    // PUT /assets/{assetTag} — Update an asset (only fields sent in the body are changed)
+    resource function put [string assetTag](map<json> req) returns Asset|http:NotFound|http:BadRequest {
         Asset? existing = assets[assetTag];
         if existing is () {
             return http:NOT_FOUND;
@@ -35,23 +24,29 @@ service /assets on new http:Listener(8080) {
 
         Asset asset = existing;
 
-        if req.name is string {
-            asset.name = <string>req.name;
+        json|error name = req.name;
+        if name is string {
+            asset.name = name;
         }
-        if req.description is string {
-            asset.description = <string>req.description;
+        json|error description = req.description;
+        if description is string {
+            asset.description = description;
         }
-        if req.institution is string {
-            asset.institution = <string>req.institution;
+        json|error institution = req.institution;
+        if institution is string {
+            asset.institution = institution;
         }
-        if req.site is string {
-            asset.site = <string>req.site;
+        json|error site = req.site;
+        if site is string {
+            asset.site = site;
         }
-        if req.status is string {
-            asset.status = <string>req.status;
+        json|error status = req.status;
+        if status is string {
+            asset.status = status;
         }
-        if req.dateAcquired is string {
-            asset.dateAcquired = <string>req.dateAcquired;
+        json|error dateAcquired = req.dateAcquired;
+        if dateAcquired is string {
+            asset.dateAcquired = dateAcquired;
         }
 
         assets.put(asset);
@@ -59,7 +54,7 @@ service /assets on new http:Listener(8080) {
     }
 
     // POST /assets/{assetTag}/loans — Loan an asset
-    resource function post [string assetTag]/loans(LoanRequest req) returns Loan|http:NotFound|http:BadRequest {
+    resource function post [string assetTag]/loans(map<json> req) returns Loan|http:NotFound|http:BadRequest {
         Asset? existing = assets[assetTag];
         if existing is () {
             return http:NOT_FOUND;
@@ -75,19 +70,29 @@ service /assets on new http:Listener(8080) {
             return err;
         }
 
+        // 'borrower' and 'dueDate' are required
+        string|http:BadRequest borrower = requireString(req.borrower, "borrower");
+        if borrower is http:BadRequest {
+            return borrower;
+        }
+        string|http:BadRequest dueDate = requireString(req.dueDate, "dueDate");
+        if dueDate is http:BadRequest {
+            return dueDate;
+        }
+
         // Create the loan record
         Loan loan = {
             loanId: uuid:createType1AsString(),
             assetTag: assetTag,
-            borrower: req.borrower,
+            borrower: borrower,
             loanDate: time:utcToString(time:utcNow()),
-            dueDate: req.dueDate,
+            dueDate: dueDate,
             status: "ACTIVE"
         };
 
         loans.add(loan);
 
-        // Reflect the new state on the asset aftre it has been loaned
+        // Reflect the new state on the asset after it has been loaned
         asset.status = "LOANED_OUT";
         assets.put(asset);
 
@@ -126,7 +131,7 @@ service /assets on new http:Listener(8080) {
     }
 
     // POST /assets/{assetTag}/bookings — Book an asset
-    resource function post [string assetTag]/bookings(BookRequest req) returns Booking|http:NotFound|http:BadRequest {
+    resource function post [string assetTag]/bookings(map<json> req) returns Booking|http:NotFound|http:BadRequest {
         Asset? existing = assets[assetTag];
         if existing is () {
             return http:NOT_FOUND;
@@ -142,13 +147,27 @@ service /assets on new http:Listener(8080) {
             return err;
         }
 
+        // 'booker', 'date' and 'time' are required
+        string|http:BadRequest booker = requireString(req.booker, "booker");
+        if booker is http:BadRequest {
+            return booker;
+        }
+        string|http:BadRequest date = requireString(req.date, "date");
+        if date is http:BadRequest {
+            return date;
+        }
+        string|http:BadRequest time = requireString(req.time, "time");
+        if time is http:BadRequest {
+            return time;
+        }
+
         // Create the booking record
         Booking booking = {
             bookingId: uuid:createType1AsString(),
             assetTag: assetTag,
-            booker: req.booker,
-            date: req.date,
-            time: req.time,
+            booker: booker,
+            date: date,
+            time: time,
             status: "CONFIRMED"
         };
 
@@ -160,4 +179,5 @@ service /assets on new http:Listener(8080) {
 
         return booking;
     }
+
 }
