@@ -2,7 +2,6 @@ import ballerina/http;
 import ballerina/time;
 import ballerina/uuid;
 
-// Reads a required string field from the request body, returning a 400 error if it is missing or not a string
 function requireString(json|error value, string fieldName) returns string|http:BadRequest {
     if value is string {
         return value;
@@ -15,7 +14,7 @@ function requireString(json|error value, string fieldName) returns string|http:B
 
 service /assets on new http:Listener(8080) {
 
-    // PUT /assets/{assetTag} — Update an asset (only fields sent in the body are changed)
+    // Update an asset
     resource function put [string assetTag](map<json> req) returns Asset|http:NotFound|http:BadRequest {
         Asset? existing = assets[assetTag];
         if existing is () {
@@ -53,7 +52,7 @@ service /assets on new http:Listener(8080) {
         return asset;
     }
 
-    // POST /assets/{assetTag}/loans — Loan an asset
+    //  Loan an asset
     resource function post [string assetTag]/loans(map<json> req) returns Loan|http:NotFound|http:BadRequest {
         Asset? existing = assets[assetTag];
         if existing is () {
@@ -99,7 +98,7 @@ service /assets on new http:Listener(8080) {
         return loan;
     }
 
-    // PUT /assets/loans/{loanId}/returnAsset — Return a loaned asset
+    // Return a loaned asset
     resource function put loans/[string loanId]/returnAsset() returns Loan|http:NotFound|http:BadRequest {
         Loan? existing = loans[loanId];
         if existing is () {
@@ -130,7 +129,7 @@ service /assets on new http:Listener(8080) {
         return loan;
     }
 
-    // POST /assets/{assetTag}/bookings — Book an asset
+    // Book an asset
     resource function post [string assetTag]/bookings(map<json> req) returns Booking|http:NotFound|http:BadRequest {
         Asset? existing = assets[assetTag];
         if existing is () {
@@ -139,7 +138,7 @@ service /assets on new http:Listener(8080) {
 
         Asset asset = existing;
 
-        // Asset must be AVAILABLE before it can be booked
+        // Asset must be available before it can be booked
         if asset.status != "AVAILABLE" {
             http:BadRequest err = {
                 body: {"message": "Asset is not available for booking (current status: " + asset.status + ")"}
