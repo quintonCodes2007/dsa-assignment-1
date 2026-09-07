@@ -43,6 +43,17 @@ function generateAssetTag(string institution, string site, string name) returns 
 
 service /assets on new http:Listener(8080) {
 
+
+    resource function delete [string assetTag]() returns http:Response {
+        if !assets.hasKey(assetTag) {
+            io:println("Asset deletion failed: tag ", assetTag, " not found");
+            return errorResponse(404, "Asset not found");
+        }
+
+        _ = assets.remove(assetTag);
+        io:println("Asset with tag ", assetTag, " deleted");
+        return successResponse(200, "Asset deleted successfully");
+    }
    
 
 }     
