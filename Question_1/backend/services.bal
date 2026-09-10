@@ -237,7 +237,41 @@ resource function post [string assetTag]/workorders(@http:Payload WorkOrder work
         }
     }
 
+  resource function delete [string assetTag]/workorders/[string orderId]/tasks/[string taskId]() returns http:Response {
+        Asset? asset = assets[assetTag];
+        if asset is Asset {
+            int woIdx = -1;
+            foreach int i in 0 ..< asset.workOrders.length() {
+                if asset.workOrders[i].orderId == orderId {
+                    woIdx = i;
+                    break;
+                }
+            }
+            if woIdx == -1 {
+                io:println("Task removal failed: work order ", orderId, " not found on asset ", assetTag);
+                return errorResponse(404, "Work order not found");
+            }
+            int taskIdx = -1;
+            foreach int j in 0 ..< asset.workOrders[woIdx].tasks.length() {
+                if asset.workOrders[woIdx].tasks[j].taskId == taskId {
+                    taskIdx = j;
+                    break;
+                }
+            }
+            if taskIdx == -1 {
+                io:println("Task removal failed: ", taskId, " not found on work order ", orderId);
+                return errorResponse(404, "Task not found");
+            }
+            _ = asset.workOrders[woIdx].tasks.remove(taskIdx);
+            assets.put(asset);
 
+            io:println("Task ", taskId, " removed from work order ", orderId);
+            return successResponse(200, "Task removed successfully");
+        } else {
+            io:println("Task removal failed: asset ", assetTag, " not found");
+            return errorResponse(404, "Asset not found");
+        }
+    }
 
     }
 
