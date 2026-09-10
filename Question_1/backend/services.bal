@@ -161,11 +161,35 @@ resource function post [string assetTag]/workorders(@http:Payload WorkOrder work
             io:println("Work order creation failed: asset ", assetTag, " not found");
             return errorResponse(404, "Asset not found");
         }
+        resource function put [string assetTag]/workorders/[string orderId](@http:Payload WorkOrder updatedOrder) returns http:Response {
+        Asset? asset = assets[assetTag];
+        if asset is Asset {
+            int idx = -1;
+            foreach int i in 0 ..< asset.workOrders.length() {
+                if asset.workOrders[i].orderId == orderId {
+                    idx = i;
+                    break;
+                }
+            }
+            if idx == -1 {
+                io:println("Work order update failed: ", orderId, " not found on asset ", assetTag);
+                return errorResponse(404, "Work order not found");
+            }
+            updatedOrder.orderId = orderId;
+            asset.workOrders[idx] = updatedOrder;
+            assets.put(asset);
 
-
-
-
-        
+            io:println("Work order ", orderId, " updated on asset ", assetTag);
+            return successResponse(200, "Work order updated successfully");
+        } else {
+            io:println("Work order update failed: asset ", assetTag, " not found");
+            return errorResponse(404, "Asset not found");
+        }
+    }
+    
+    
+    
+    
     }
 
 
