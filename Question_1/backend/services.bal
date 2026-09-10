@@ -43,17 +43,10 @@ function generateAssetTag(string institution, string site, string name) returns 
     return institutionCode + "-" + siteCode + "-" + assetCode + "-" + number;
 }
 
-// ============================================================
-// ASSET SERVICE
-// Base URL: http://localhost:8080/assets
-// ============================================================
 
 service /assets on new http:Listener(8080) {
 
-    // --------------------------------------------------------
-    // CREATE ASSET
-    // POST /assets
-    // --------------------------------------------------------
+
     resource function post .(@http:Payload Asset asset) returns http:Response {
 
         string tag = asset.assetTag == ""
@@ -90,11 +83,7 @@ service /assets on new http:Listener(8080) {
         return response;
     }
 
-    // --------------------------------------------------------
-    // VIEW ALL ASSETS / SEARCH BY INSTITUTION
-    // GET /assets
-    // GET /assets?institution=...
-    // --------------------------------------------------------
+
     resource function get .(http:Request request) returns Asset[] {
 
         string? institution = request.getQueryParamValue("institution");
@@ -110,10 +99,7 @@ service /assets on new http:Listener(8080) {
         return allAssets;
     }
 
-    // --------------------------------------------------------
-    // VIEW ONE ASSET
-    // GET /assets/{assetTag}
-    // --------------------------------------------------------
+
     resource function get [string assetTag]() returns http:Response {
 
         Asset? asset = assets[assetTag];
@@ -136,10 +122,7 @@ service /assets on new http:Listener(8080) {
         return response;
     }
 
-    // --------------------------------------------------------
-    // DELETE ASSET
-    // DELETE /assets/{assetTag}
-    // --------------------------------------------------------
+
     resource function delete [string assetTag]() returns http:Response {
 
         if !assets.hasKey(assetTag) {
@@ -164,4 +147,30 @@ service /assets on new http:Listener(8080) {
 
         return response;
     }
+resource function post [string assetTag]/workorders(@http:Payload WorkOrder workOrder) returns http:Response {
+        Asset? asset = assets[assetTag];
+        if asset is Asset {
+            workOrder.orderId = "WO-" + time:utcToString(time:utcNow());
+            workOrder.status = "OPEN";
+            asset.workOrders.push(workOrder);
+            assets.put(asset);
+
+            io:println("Work order ", workOrder.orderId, " created for asset ", assetTag);
+            return successResponse(201, "Work order created successfully");
+        } else {
+            io:println("Work order creation failed: asset ", assetTag, " not found");
+            return errorResponse(404, "Asset not found");
+        }
+
+
+
+
+        
+    }
+
+
+
+
+
+
 }
