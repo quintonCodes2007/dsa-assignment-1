@@ -211,6 +211,33 @@ resource function post [string assetTag]/workorders(@http:Payload WorkOrder work
             return errorResponse(404, "Asset not found");
         }
     }
+ resource function post [string assetTag]/workorders/[string orderId]/tasks(@http:Payload Task task) returns http:Response {
+        Asset? asset = assets[assetTag];
+        if asset is Asset {
+            int idx = -1;
+            foreach int i in 0 ..< asset.workOrders.length() {
+                if asset.workOrders[i].orderId == orderId {
+                    idx = i;
+                    break;
+                }
+            }
+            if idx == -1 {
+                io:println("Task creation failed: work order ", orderId, " not found on asset ", assetTag);
+                return errorResponse(404, "Work order not found");
+            }
+            task.taskId = "TASK-" + time:utcToString(time:utcNow());
+            asset.workOrders[idx].tasks.push(task);
+            assets.put(asset);
+
+            io:println("Task ", task.taskId, " added to work order ", orderId);
+            return successResponse(201, "Task added successfully");
+        } else {
+            io:println("Task creation failed: asset ", assetTag, " not found");
+            return errorResponse(404, "Asset not found");
+        }
+    }
+
+
 
     }
 
