@@ -187,9 +187,31 @@ resource function post [string assetTag]/workorders(@http:Payload WorkOrder work
         }
     }
     
-    
-    
-    
+    resource function patch [string assetTag]/workorders/[string orderId]/close() returns http:Response {
+        Asset? asset = assets[assetTag];
+        if asset is Asset {
+            int idx = -1;
+            foreach int i in 0 ..< asset.workOrders.length() {
+                if asset.workOrders[i].orderId == orderId {
+                    idx = i;
+                    break;
+                }
+            }
+            if idx == -1 {
+                io:println("Work order close failed: ", orderId, " not found on asset ", assetTag);
+                return errorResponse(404, "Work order not found");
+            }
+            asset.workOrders[idx].status = "CLOSED";
+            assets.put(asset);
+
+            io:println("Work order ", orderId, " closed on asset ", assetTag);
+            return successResponse(200, "Work order closed successfully");
+        } else {
+            io:println("Work order close failed: asset ", assetTag, " not found");
+            return errorResponse(404, "Asset not found");
+        }
+    }
+
     }
 
 
