@@ -18,7 +18,29 @@ function scheduleMenu(http:Client assetClient) returns error? {
         }
     }
 }
+function addSchedule(http:Client assetClient) returns error? {
+    string assetTag = io:readln("Asset tag: ");
+    string scheduleType = io:readln("Schedule type (MAINTENANCE, INSPECTION, CALIBRATION): ");
+    string dueDate = io:readln("Due date (YYYY-MM-DD): ");
+    string description = io:readln("Description: ");
 
+    json schedule = {
+        "scheduleId": "",
+        "scheduleType": scheduleType,
+        "dueDate": dueDate,
+        "description": description
+    };
+
+    http:Response response = check assetClient->post("/assets/" + assetTag + "/schedules", schedule);
+    handleResponse(response, "Schedule added", "Could not add schedule");
+}
+
+function deleteSchedule(http:Client assetClient) returns error? {
+    string assetTag = io:readln("Asset tag: ");
+    string scheduleId = io:readln("Schedule ID: ");
+    http:Response response = check assetClient->delete("/assets/" + assetTag + "/schedules/" + scheduleId);
+    handleResponse(response, "Schedule removed", "Could not remove schedule");
+}
 function printAsset(json assetJson) {
     map<json> a = <map<json>>assetJson;
 
