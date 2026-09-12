@@ -1,6 +1,7 @@
 import ballerina/http;
 import ballerina/time;
 import ballerina/lang.regexp;
+import ballerina/io;
 
 
 
@@ -60,24 +61,27 @@ service /assets on new http:Listener(8080) {
         response.setPayload(asset);
         return response;
     }
- resource function post [string assetTag]/schedules(Schedule schedule)
-        returns http:Response|error {
+resource function post [string assetTag]/schedules(@http:Payload Schedule schedule) returns http:Response {
+        Asset? asset = assets[assetTag];
 
-    http:Response response = new;
-
-    foreach Asset asset in assets {
-        if asset.assetTag == assetTag {
+        if asset is Asset {
+            schedule.scheduleId = "SCH-" + time:utcToString(time:utcNow());
             asset.schedules.push(schedule);
-            response.statusCode = 201;
-            response.setPayload(schedule);
-            return response;
+            assets.put(asset);
+
+            io:println("Schedule ", schedule.scheduleId, " added to asset ", assetTag);
+           http:Response response = new;
+response.statusCode = 201;
+response.setPayload("Schedule added successfully");
+return response;
+        } else {
+            io:println("Schedule creation failed: asset ", assetTag, " not found");
+           http:Response response = new;
+response.statusCode = 404;
+response.setPayload("Asset not found");
+return response;
         }
     }
-
-    response.statusCode = 404;
-    response.setPayload("Asset not found");
-    return response;
-}  
 resource function get [string assetTag]/schedules()
         returns Schedule[]|http:Response|error {
 
@@ -92,51 +96,38 @@ resource function get [string assetTag]/schedules()
     response.setPayload("Asset not found");
     return response;
 }
-resource function delete [string assetTag]/schedules/[string scheduleId]()
-        returns http:Response|error {
-
-    http:Response response = new;
-
-    foreach Asset asset in assets {
-        if asset.assetTag == assetTag {
-
-            Schedule[] newSchedules = [];
-
-            foreach Schedule schedule in asset.schedules {
-                if schedule.scheduleId != scheduleId {
-                    newSchedules.push(schedule);
+resource function delete [string assetTag]/schedules/[string scheduleId]() returns http:Response {
+        Asset? asset = assets[assetTag];
+        if asset is Asset {
+            int idx = -1;
+            foreach int i in 0 ..< asset.schedules.length() {
+                if asset.schedules[i].scheduleId == scheduleId {
+                    idx = i;
+                    break;
                 }
             }
-
-            if newSchedules.length() == asset.schedules.length() {
-                response.statusCode = 404;
-                response.setPayload("Schedule not found");
-                return response;
+            if idx == -1 {
+                io:println("Schedule removal failed: ", scheduleId, " not found on asset ", assetTag);
+            http:Response response = new;
+response.statusCode = 404;
+response.setPayload("Schedule not found");
+return response;
             }
-Asset updatedAsset = {
-    assetTag: asset.assetTag,
-    name: asset.name,
-    description: asset.description,
-    institution: asset.institution,
-    site: asset.site,
-    status: asset.status,
-    dateAcquired: asset.dateAcquired,
-    components: asset.components,
-    schedules: newSchedules,
-    workOrders: asset.workOrders
-};
+            _ = asset.schedules.remove(idx);
+            assets.put(asset);
 
-            assets.put(updatedAsset);
-
-            response.statusCode = 200;
-            response.setPayload("Schedule removed successfully");
-            return response;
+            io:println("Schedule ", scheduleId, " removed from asset ", assetTag);
+          http:Response response = new;
+response.statusCode = 200;
+response.setPayload("Schedule removed successfully");
+return response;
+        } else {
+            io:println("Schedule removal failed: asset ", assetTag, " not found");
+         http:Response response = new;
+response.statusCode = 404;
+response.setPayload("Asset not found");
+return response;
         }
-    }
-
-    response.statusCode = 404;
-    response.setPayload("Asset not found");
-    return response;
 }
 resource function put [string assetTag]/schedules/[string scheduleId](Schedule updatedSchedule)
         returns http:Response|error {
