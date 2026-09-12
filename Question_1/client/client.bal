@@ -2,6 +2,22 @@ import ballerina/http;
 import ballerina/io;
 
 public function main() returns error? {
+function scheduleMenu(http:Client assetClient) returns error? {
+    boolean back = false;
+    while !back {
+        io:println("\n----- SCHEDULES -----");
+        io:println("1. Add schedule to asset");
+        io:println("2. Remove schedule from asset");
+        io:println("0. Back to main menu");
+        string choice = io:readln("Select an option: ");
+        match choice {
+            "1" => { check addSchedule(assetClient); }
+            "2" => { check deleteSchedule(assetClient); }
+            "0" => { back = true; }
+            _ => { io:println("Invalid option, please try again."); }
+        }
+    }
+}
 
 function printAsset(json assetJson) {
     map<json> a = <map<json>>assetJson;
