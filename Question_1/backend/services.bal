@@ -45,7 +45,30 @@ function generateAssetTag(string institution, string site, string name) returns 
 
 
 service /assets on new http:Listener(8080) {
+resource function delete [string assetTag]/schedules/[string scheduleId]() returns http:Response {
+        Asset? asset = assets[assetTag];
+        if asset is Asset {
+            int idx = -1;
+            foreach int i in 0 ..< asset.schedules.length() {
+                if asset.schedules[i].scheduleId == scheduleId {
+                    idx = i;
+                    break;
+                }
+            }
+            if idx == -1 {
+                io:println("Schedule removal failed: ", scheduleId, " not found on asset ", assetTag);
+                return errorResponse(404, "Schedule not found");
+            }
+            _ = asset.schedules.remove(idx);
+            assets.put(asset);
 
+            io:println("Schedule ", scheduleId, " removed from asset ", assetTag);
+            return successResponse(200, "Schedule removed successfully");
+        } else {
+            io:println("Schedule removal failed: asset ", assetTag, " not found");
+            return errorResponse(404, "Asset not found");
+        }
+    }
 
     resource function post .(@http:Payload Asset asset) returns http:Response {
 
