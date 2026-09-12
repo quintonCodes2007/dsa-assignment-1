@@ -69,7 +69,21 @@ resource function delete [string assetTag]/schedules/[string scheduleId]() retur
             return errorResponse(404, "Asset not found");
         }
     }
+resource function post [string assetTag]/schedules(@http:Payload Schedule schedule) returns http:Response {
+        Asset? asset = assets[assetTag];
 
+        if asset is Asset {
+            schedule.scheduleId = "SCH-" + time:utcToString(time:utcNow());
+            asset.schedules.push(schedule);
+            assets.put(asset);
+
+            io:println("Schedule ", schedule.scheduleId, " added to asset ", assetTag);
+            return successResponse(201, "Schedule added successfully");
+        } else {
+            io:println("Schedule creation failed: asset ", assetTag, " not found");
+            return errorResponse(404, "Asset not found");
+        }
+    }
     resource function post .(@http:Payload Asset asset) returns http:Response {
 
         string tag = asset.assetTag == ""
