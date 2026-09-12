@@ -2,7 +2,45 @@ import ballerina/http;
 import ballerina/io;
 
 public function main() returns error? {
+function scheduleMenu(http:Client assetClient) returns error? {
+    boolean back = false;
+    while !back {
+        io:println("\n----- SCHEDULES -----");
+        io:println("1. Add schedule to asset");
+        io:println("2. Remove schedule from asset");
+        io:println("0. Back to main menu");
+        string choice = io:readln("Select an option: ");
+        match choice {
+            "1" => { check addSchedule(assetClient); }
+            "2" => { check deleteSchedule(assetClient); }
+            "0" => { back = true; }
+            _ => { io:println("Invalid option, please try again."); }
+        }
+    }
+}
+function addSchedule(http:Client assetClient) returns error? {
+    string assetTag = io:readln("Asset tag: ");
+    string scheduleType = io:readln("Schedule type (MAINTENANCE, INSPECTION, CALIBRATION): ");
+    string dueDate = io:readln("Due date (YYYY-MM-DD): ");
+    string description = io:readln("Description: ");
 
+    json schedule = {
+        "scheduleId": "",
+        "scheduleType": scheduleType,
+        "dueDate": dueDate,
+        "description": description
+    };
+
+    http:Response response = check assetClient->post("/assets/" + assetTag + "/schedules", schedule);
+    handleResponse(response, "Schedule added", "Could not add schedule");
+}
+
+function deleteSchedule(http:Client assetClient) returns error? {
+    string assetTag = io:readln("Asset tag: ");
+    string scheduleId = io:readln("Schedule ID: ");
+    http:Response response = check assetClient->delete("/assets/" + assetTag + "/schedules/" + scheduleId);
+    handleResponse(response, "Schedule removed", "Could not remove schedule");
+}
 function printAsset(json assetJson) {
     map<json> a = <map<json>>assetJson;
 
