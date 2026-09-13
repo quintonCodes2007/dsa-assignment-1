@@ -1,6 +1,7 @@
 import ballerina/http;
 import ballerina/time;
 import ballerina/lang.regexp;
+import ballerina/io;
 
 final regexp:RegExp SPACE_REGEX = re `\s+`;
 
@@ -45,45 +46,7 @@ function generateAssetTag(string institution, string site, string name) returns 
 
 
 service /assets on new http:Listener(8080) {
-resource function delete [string assetTag]/schedules/[string scheduleId]() returns http:Response {
-        Asset? asset = assets[assetTag];
-        if asset is Asset {
-            int idx = -1;
-            foreach int i in 0 ..< asset.schedules.length() {
-                if asset.schedules[i].scheduleId == scheduleId {
-                    idx = i;
-                    break;
-                }
-            }
-            if idx == -1 {
-                io:println("Schedule removal failed: ", scheduleId, " not found on asset ", assetTag);
-                return errorResponse(404, "Schedule not found");
-            }
-            _ = asset.schedules.remove(idx);
-            assets.put(asset);
 
-            io:println("Schedule ", scheduleId, " removed from asset ", assetTag);
-            return successResponse(200, "Schedule removed successfully");
-        } else {
-            io:println("Schedule removal failed: asset ", assetTag, " not found");
-            return errorResponse(404, "Asset not found");
-        }
-    }
-resource function post [string assetTag]/schedules(@http:Payload Schedule schedule) returns http:Response {
-        Asset? asset = assets[assetTag];
-
-        if asset is Asset {
-            schedule.scheduleId = "SCH-" + time:utcToString(time:utcNow());
-            asset.schedules.push(schedule);
-            assets.put(asset);
-
-            io:println("Schedule ", schedule.scheduleId, " added to asset ", assetTag);
-            return successResponse(201, "Schedule added successfully");
-        } else {
-            io:println("Schedule creation failed: asset ", assetTag, " not found");
-            return errorResponse(404, "Asset not found");
-        }
-    }
     resource function post .(@http:Payload Asset asset) returns http:Response {
 
         string tag = asset.assetTag == ""
@@ -184,7 +147,7 @@ resource function post [string assetTag]/schedules(@http:Payload Schedule schedu
 
         return response;
     }
-resource function post [string assetTag]/workorders(@http:Payload WorkOrder workOrder) returns http:Response {
+    resource function post [string assetTag]/workorders(@http:Payload WorkOrder workOrder) returns http:Response {
         Asset? asset = assets[assetTag];
         if asset is Asset {
             workOrder.orderId = "WO-" + time:utcToString(time:utcNow());
@@ -198,7 +161,8 @@ resource function post [string assetTag]/workorders(@http:Payload WorkOrder work
             io:println("Work order creation failed: asset ", assetTag, " not found");
             return errorResponse(404, "Asset not found");
         }
-        resource function put [string assetTag]/workorders/[string orderId](@http:Payload WorkOrder updatedOrder) returns http:Response {
+    }        
+    resource function put [string assetTag]/workorders/[string orderId](@http:Payload WorkOrder updatedOrder) returns http:Response {
         Asset? asset = assets[assetTag];
         if asset is Asset {
             int idx = -1;
@@ -274,7 +238,7 @@ resource function post [string assetTag]/workorders(@http:Payload WorkOrder work
         }
     }
 
-  resource function delete [string assetTag]/workorders/[string orderId]/tasks/[string taskId]() returns http:Response {
+    resource function delete [string assetTag]/workorders/[string orderId]/tasks/[string taskId]() returns http:Response {
         Asset? asset = assets[assetTag];
         if asset is Asset {
             int woIdx = -1;
@@ -309,6 +273,48 @@ resource function post [string assetTag]/workorders(@http:Payload WorkOrder work
             return errorResponse(404, "Asset not found");
         }
     }
+
+    resource function delete [string assetTag]/schedules/[string scheduleId]() returns http:Response {
+        Asset? asset = assets[assetTag];
+        if asset is Asset {
+            int idx = -1;
+            foreach int i in 0 ..< asset.schedules.length() {
+                if asset.schedules[i].scheduleId == scheduleId {
+                    idx = i;
+                    break;
+                }
+            }
+            if idx == -1 {
+                io:println("Schedule removal failed: ", scheduleId, " not found on asset ", assetTag);
+                return errorResponse(404, "Schedule not found");
+            }
+            _ = asset.schedules.remove(idx);
+            assets.put(asset);
+
+            io:println("Schedule ", scheduleId, " removed from asset ", assetTag);
+            return successResponse(200, "Schedule removed successfully");
+        } else {
+            io:println("Schedule removal failed: asset ", assetTag, " not found");
+            return errorResponse(404, "Asset not found");
+        }
+    }
+
+    resource function post [string assetTag]/schedules(@http:Payload Schedule schedule) returns http:Response {
+            Asset? asset = assets[assetTag];
+
+            if asset is Asset {
+                schedule.scheduleId = "SCH-" + time:utcToString(time:utcNow());
+                asset.schedules.push(schedule);
+                assets.put(asset);
+
+                io:println("Schedule ", schedule.scheduleId, " added to asset ", assetTag);
+                return successResponse(201, "Schedule added successfully");
+            } else {
+                io:println("Schedule creation failed: asset ", assetTag, " not found");
+                return errorResponse(404, "Asset not found");
+            }
+    }
+
 
     }
 
