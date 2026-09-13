@@ -171,6 +171,47 @@ service /assets on new http:Listener(8080) {
         io:println("Asset ", newAsset.name, " updated with tag ", assetTag);
         return successResponse(200, "Asset updated");
     }
+
+    resource function post loans(@http:Payload Loan loan) returns http:Response {
+        Asset? asset = assets[loan.assetTag];
+        if asset is Asset {
+            if asset.status != "AVAILABLE" {
+                io:println("Loan creation failed: asset ", loan.assetTag, " is not available");
+                return errorResponse(409, "Asset is not available for loan");
+            }
+
+            Loan newLoan = {
+                loanId: "LOAN-" + time:utcToString(time:utcNow()),
+                assetTag: loan.assetTag,
+                borrower: loan.borrower,
+                status: "ACTIVE",
+                loanDate: loan.loanDate,
+                dueDate: loan.dueDate
+            };
+            loans.put(newLoan);
+
+            Asset updated = {
+                assetTag: asset.assetTag,
+                name: asset.name,
+                description: asset.description,
+                institution: asset.institution,
+                site: asset.site,
+                status: "LOANED_OUT",
+                dateAcquired: asset.dateAcquired,
+                components: asset.components,
+                schedules: asset.schedules,
+                workOrders: asset.workOrders
+            };
+            assets.put(updated);
+
+            io:println("Loan ", newLoan.loanId, " created for asset ", loan.assetTag);
+            return successResponse(201, "Loan created successfully");
+        } else {
+            io:println("Loan creation failed: asset ", loan.assetTag, " not found");
+            return errorResponse(404, "Asset not found");
+        }
+    }
+
     resource function post [string assetTag]/workorders(@http:Payload WorkOrder workOrder) returns http:Response {
         Asset? asset = assets[assetTag];
         if asset is Asset {
@@ -341,4 +382,3 @@ service /assets on new http:Listener(8080) {
 
 
     }
-
