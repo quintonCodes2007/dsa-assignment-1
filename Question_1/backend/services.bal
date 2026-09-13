@@ -212,6 +212,49 @@ service /assets on new http:Listener(8080) {
         }
     }
 
+    resource function patch loans/[string loanId]/returnAsset() returns http:Response {
+        Loan? loan = loans[loanId];
+        if loan is Loan {
+            if loan.status != "ACTIVE" {
+                io:println("Return failed: loan ", loanId, " is not active");
+                return errorResponse(409, "Loan is not active");
+            }
+
+            Loan updatedLoan = {
+                loanId: loan.loanId,
+                assetTag: loan.assetTag,
+                borrower: loan.borrower,
+                status: "RETURNED",
+                loanDate: loan.loanDate,
+                dueDate: loan.dueDate
+            };
+            loans.put(updatedLoan);
+
+            Asset? asset = assets[loan.assetTag];
+            if asset is Asset {
+                Asset updated = {
+                    assetTag: asset.assetTag,
+                    name: asset.name,
+                    description: asset.description,
+                    institution: asset.institution,
+                    site: asset.site,
+                    status: "AVAILABLE",
+                    dateAcquired: asset.dateAcquired,
+                    components: asset.components,
+                    schedules: asset.schedules,
+                    workOrders: asset.workOrders
+                };
+                assets.put(updated);
+            }
+
+            io:println("Asset ", loan.assetTag, " returned, loan ", loanId, " closed");
+            return successResponse(200, "Asset returned successfully");
+        } else {
+            io:println("Return failed: loan ", loanId, " not found");
+            return errorResponse(404, "Loan not found");
+        }
+    }
+
     resource function post [string assetTag]/workorders(@http:Payload WorkOrder workOrder) returns http:Response {
         Asset? asset = assets[assetTag];
         if asset is Asset {
