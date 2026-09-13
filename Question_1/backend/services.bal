@@ -147,6 +147,30 @@ service /assets on new http:Listener(8080) {
 
         return response;
     }
+
+    resource function put [string assetTag](@http:Payload Asset updatedAsset) returns http:Response {
+        if !assets.hasKey(assetTag) {
+            io:println("Asset update failed: tag ", assetTag, " not found");
+            return errorResponse(404, "Asset not found");
+        }
+
+        Asset newAsset = {
+            assetTag: assetTag,
+            name: updatedAsset.name,
+            description: updatedAsset.description,
+            institution: updatedAsset.institution,
+            site: updatedAsset.site,
+            status: updatedAsset.status,
+            dateAcquired: updatedAsset.dateAcquired,
+            components: updatedAsset.components,
+            schedules: updatedAsset.schedules,
+            workOrders: updatedAsset.workOrders
+        };
+        assets.put(newAsset);
+
+        io:println("Asset ", newAsset.name, " updated with tag ", assetTag);
+        return successResponse(200, "Asset updated");
+    }
     resource function post [string assetTag]/workorders(@http:Payload WorkOrder workOrder) returns http:Response {
         Asset? asset = assets[assetTag];
         if asset is Asset {
