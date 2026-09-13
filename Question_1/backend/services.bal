@@ -318,9 +318,3 @@ service /assets on new http:Listener(8080) {
 
     }
 
-
-
-
-
-
-}
