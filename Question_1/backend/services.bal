@@ -148,6 +148,194 @@ service /assets on new http:Listener(8080) {
 
         return response;
     }
+
+    resource function put [string assetTag](@http:Payload Asset updatedAsset) returns http:Response {
+        if !assets.hasKey(assetTag) {
+            io:println("Asset update failed: tag ", assetTag, " not found");
+            return errorResponse(404, "Asset not found");
+        }
+
+        Asset newAsset = {
+            assetTag: assetTag,
+            name: updatedAsset.name,
+            description: updatedAsset.description,
+            institution: updatedAsset.institution,
+            site: updatedAsset.site,
+            status: updatedAsset.status,
+            dateAcquired: updatedAsset.dateAcquired,
+            components: updatedAsset.components,
+            schedules: updatedAsset.schedules,
+            workOrders: updatedAsset.workOrders
+        };
+        assets.put(newAsset);
+
+        io:println("Asset ", newAsset.name, " updated with tag ", assetTag);
+        return successResponse(200, "Asset updated");
+    }
+
+    resource function post [string assetTag]/components(@http:Payload Component component) returns http:Response {
+        Asset? asset = assets[assetTag];
+        if asset is Asset {
+            component.compId = "CMP-" + time:utcToString(time:utcNow());
+            asset.components.push(component);
+            assets.put(asset);
+
+            io:println("Component ", component.compId, " added to asset ", assetTag);
+            return successResponse(201, "Component added successfully");
+        } else {
+            io:println("Component creation failed: asset ", assetTag, " not found");
+            return errorResponse(404, "Asset not found");
+        }
+    }
+
+    resource function delete [string assetTag]/components/[string compId]() returns http:Response {
+        Asset? asset = assets[assetTag];
+        if asset is Asset {
+            int idx = -1;
+            foreach int i in 0 ..< asset.components.length() {
+                if asset.components[i].compId == compId {
+                    idx = i;
+                    break;
+                }
+            }
+            if idx == -1 {
+                io:println("Component removal failed: ", compId, " not found on asset ", assetTag);
+                return errorResponse(404, "Component not found");
+            }
+            _ = asset.components.remove(idx);
+            assets.put(asset);
+
+            io:println("Component ", compId, " removed from asset ", assetTag);
+            return successResponse(200, "Component removed successfully");
+        } else {
+            io:println("Component removal failed: asset ", assetTag, " not found");
+            return errorResponse(404, "Asset not found");
+        }
+    }
+
+    resource function post loans(@http:Payload Loan loan) returns http:Response {
+        Asset? asset = assets[loan.assetTag];
+        if asset is Asset {
+            if asset.status != "AVAILABLE" {
+                io:println("Loan creation failed: asset ", loan.assetTag, " is not available");
+                return errorResponse(409, "Asset is not available for loan");
+            }
+
+            Loan newLoan = {
+                loanId: "LOAN-" + time:utcToString(time:utcNow()),
+                assetTag: loan.assetTag,
+                borrower: loan.borrower,
+                status: "ACTIVE",
+                loanDate: loan.loanDate,
+                dueDate: loan.dueDate
+            };
+            loans.put(newLoan);
+
+            Asset updated = {
+                assetTag: asset.assetTag,
+                name: asset.name,
+                description: asset.description,
+                institution: asset.institution,
+                site: asset.site,
+                status: "LOANED_OUT",
+                dateAcquired: asset.dateAcquired,
+                components: asset.components,
+                schedules: asset.schedules,
+                workOrders: asset.workOrders
+            };
+            assets.put(updated);
+
+            io:println("Loan ", newLoan.loanId, " created for asset ", loan.assetTag);
+            return successResponse(201, "Loan created successfully");
+        } else {
+            io:println("Loan creation failed: asset ", loan.assetTag, " not found");
+            return errorResponse(404, "Asset not found");
+        }
+    }
+
+    resource function patch loans/[string loanId]/returnAsset() returns http:Response {
+        Loan? loan = loans[loanId];
+        if loan is Loan {
+            if loan.status != "ACTIVE" {
+                io:println("Return failed: loan ", loanId, " is not active");
+                return errorResponse(409, "Loan is not active");
+            }
+
+            Loan updatedLoan = {
+                loanId: loan.loanId,
+                assetTag: loan.assetTag,
+                borrower: loan.borrower,
+                status: "RETURNED",
+                loanDate: loan.loanDate,
+                dueDate: loan.dueDate
+            };
+            loans.put(updatedLoan);
+
+            Asset? asset = assets[loan.assetTag];
+            if asset is Asset {
+                Asset updated = {
+                    assetTag: asset.assetTag,
+                    name: asset.name,
+                    description: asset.description,
+                    institution: asset.institution,
+                    site: asset.site,
+                    status: "AVAILABLE",
+                    dateAcquired: asset.dateAcquired,
+                    components: asset.components,
+                    schedules: asset.schedules,
+                    workOrders: asset.workOrders
+                };
+                assets.put(updated);
+            }
+
+            io:println("Asset ", loan.assetTag, " returned, loan ", loanId, " closed");
+            return successResponse(200, "Asset returned successfully");
+        } else {
+            io:println("Return failed: loan ", loanId, " not found");
+            return errorResponse(404, "Loan not found");
+        }
+    }
+
+    resource function post bookings(@http:Payload Booking booking) returns http:Response {
+        Asset? asset = assets[booking.assetTag];
+        if asset is Asset {
+            if asset.status != "AVAILABLE" {
+                io:println("Booking failed: asset ", booking.assetTag, " is not available");
+                return errorResponse(409, "Asset is not available for booking");
+            }
+
+            Booking newBooking = {
+                bookingId: "BOK-" + time:utcToString(time:utcNow()),
+                assetTag: booking.assetTag,
+                booker: booking.booker,
+                date: booking.date,
+                time: booking.time,
+                status: "CONFIRMED"
+            };
+            bookings.put(newBooking);
+
+            Asset updated = {
+                assetTag: asset.assetTag,
+                name: asset.name,
+                description: asset.description,
+                institution: asset.institution,
+                site: asset.site,
+                status: "OCCUPIED",
+                dateAcquired: asset.dateAcquired,
+                components: asset.components,
+                schedules: asset.schedules,
+                workOrders: asset.workOrders
+            };
+            assets.put(updated);
+
+            io:println("Booking ", newBooking.bookingId, " created for asset ", booking.assetTag);
+            return successResponse(201, "Booking created successfully");
+        } else {
+            io:println("Booking failed: asset ", booking.assetTag, " not found");
+            return errorResponse(404, "Asset not found");
+        }
+    }
+
     resource function post [string assetTag]/workorders(@http:Payload WorkOrder workOrder) returns http:Response {
         Asset? asset = assets[assetTag];
         if asset is Asset {
@@ -318,4 +506,3 @@ service /assets on new http:Listener(8080) {
 
 
     }
-
