@@ -196,4 +196,89 @@ remote function search_property(SearchPropertyRequest value) returns SearchPrope
         }
         return {message: "No booking found in cart"};
     }
+
+    remote function cancel_booking(CancelBookingRequest value) returns CancelBookingResponse|error {
+        Booking? booking = self.bookings[value.booking_id];
+        if booking is Booking {
+            if booking.guest_id != value.guest_id {
+                return {message: "You are not authorized to cancel this booking"};
+            }
+            if booking.status != "CONFIRMED" {
+                return {message: "Booking cannot be cancelled"};
+            }
+
+            Booking cancelledBooking = {
+                booking_id: booking.booking_id,
+                property_id: booking.property_id,
+                guest_id: booking.guest_id,
+                check_in: booking.check_in,
+                check_out: booking.check_out,
+                number_of_nights: booking.number_of_nights,
+                total_cost: booking.total_cost,
+                status: "CANCELLED"
+            };
+            self.bookings[value.booking_id] = cancelledBooking;
+            return {
+                message: "Booking cancelled successfully",
+                booking: cancelledBooking
+            };
+        }
+        return {message: "Booking not found"};
+    }
+
+    remote function create_users(stream<CreateUserRequest, grpc:Error?> clientStream)
+            returns CreateUsersResponse|error {
+        int usersCreated = 0;
+        record {|CreateUserRequest value;|}|grpc:Error? result = clientStream.next();
+        while result is record {|CreateUserRequest value;|} {
+            string userId = "USER-" + (self.users.length() + 1).toString();
+            self.users[userId] = result.value;
+            usersCreated += 1;
+            result = clientStream.next();
+        }
+        return {message: "Users created successfully", users_created: usersCreated};
+    }
+
+    remote function list_available_properties(ListPropertiesRequest value)
+            returns stream<Property, error?>|error {
+        Property[] result = [];
+        foreach Property property in self.properties {
+            if property.status != "AVAILABLE" {
+                continue;
+            }
+            if value.location != "" && property.location != value.location {
+                continue;
+            }
+            if value.min_price > 0.0 && property.price_per_night < value.min_price {
+                continue;
+            }
+            if value.max_price > 0.0 && property.price_per_night > value.max_price {
+                continue;
+            }
+            result.push(property);
+        }
+        return result.toStream();
+    }
+
+    remote function list_host_properties(ListHostPropertiesRequest value)
+            returns stream<Property, error?>|error {
+        Property[] result = [];
+        foreach Property property in self.properties {
+            if property.host_id == value.host_id {
+                result.push(property);
+            }
+        }
+        return result.toStream();
+    }
+
+    remote function view_my_bookings(ViewMyBookingsRequest value)
+            returns stream<Booking, error?>|error {
+        Booking[] result = [];
+        foreach Booking booking in self.bookings {
+            if booking.guest_id == value.guest_id {
+                result.push(booking);
+            }
+        }
+        return result.toStream();
+    }
     }
