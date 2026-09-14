@@ -45,6 +45,7 @@ function generateAssetTag(string institution, string site, string name) returns 
 }
 
 
+
 service /assets on new http:Listener(8080) {
 
     resource function post .(@http:Payload Asset asset) returns http:Response {
