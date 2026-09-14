@@ -59,7 +59,21 @@ function stripSpaces(string input) returns string {
                 return bookingId;
             }
             count += 1;
+        
         }
     }
-    
+    remote function add_property(AddPropertyRequest value) returns AddPropertyResponse|error {
+        string propertyId = self.generatePropertyId(value.property_name, value.location);
+        Property newProperty = {
+            property_id: propertyId,
+            host_id: value.host_id,
+            property_name: value.property_name,
+            location: value.location,
+            property_type: value.property_type,
+            price_per_night: value.price_per_night,
+            status: value.status
+        };
+        self.properties[propertyId] = newProperty;
+        return {property_id: propertyId};
+    }
 }
