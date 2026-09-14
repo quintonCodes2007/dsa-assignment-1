@@ -26,5 +26,30 @@ function stripSpaces(string input) returns string {
         }
         return result;
     }
+        function generatePropertyId(string propertyName, string location) returns string {
+        string nameCode = self.stripSpaces(propertyName.toUpperAscii());
+        string locationCode = self.stripSpaces(location.toUpperAscii());
+
+        if nameCode.length() > 3 {
+            nameCode = nameCode.substring(0, 3);
+        }
+        if locationCode.length() > 3 {
+            locationCode = locationCode.substring(0, 3);
+        }
+
+        int count = 1;
+        string propertyId = "";
+        while true {
+            string number = count.toString();
+            while number.length() < 3 {
+                number = "0" + number;
+            }
+            propertyId = nameCode + "-" + locationCode + "-" + number;
+            if !self.properties.hasKey(propertyId) {
+                return propertyId;
+            }
+            count += 1;
+        }
+    }
     
 }
