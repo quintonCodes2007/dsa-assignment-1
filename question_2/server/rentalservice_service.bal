@@ -17,6 +17,14 @@ service "RentalService" on ep {
     private map<BookPropertyRequest> bookingCart = {};
     private map<Booking> bookings = {};
     private map<CreateUserRequest> users = {};
-
+function stripSpaces(string input) returns string {
+        string result = "";
+        foreach string:Char c in input {
+            if c != " " && c != "\t" && c != "\n" {
+                result += c;
+            }
+        }
+        return result;
+    }
     
 }
