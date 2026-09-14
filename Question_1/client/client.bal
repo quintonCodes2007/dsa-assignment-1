@@ -87,7 +87,46 @@ public function main() returns error? {
         handleResponse(response, "Schedule removed", "Could not remove schedule");
     }
 
+// ================= COMPONENT MENU =================
 
+function componentMenu(http:Client assetClient) returns error? {
+    boolean back = false;
+    while !back {
+        io:println("\n----- COMPONENTS -----");
+        io:println("1. Add component to asset");
+        io:println("2. Remove component from asset");
+        io:println("0. Back to main menu");
+        string choice = io:readln("Select an option: ");
+        match choice {
+            "1" => { check addComponent(assetClient); }
+            "2" => { check deleteComponent(assetClient); }
+            "0" => { back = true; }
+            _ => { io:println("Invalid option, please try again."); }
+        }
+    }
+}
+
+function addComponent(http:Client assetClient) returns error? {
+    string assetTag = io:readln("Asset tag: ");
+    string name = io:readln("Component name: ");
+    string description = io:readln("Component description: ");
+
+    json component = {
+        "compId": "",
+        "name": name,
+        "description": description
+    };
+
+    http:Response response = check assetClient->post("/assets/" + assetTag + "/components", component);
+    handleResponse(response, "Component added", "Could not add component");
+}
+
+function deleteComponent(http:Client assetClient) returns error? {
+    string assetTag = io:readln("Asset tag: ");
+    string compId = io:readln("Component ID: ");
+    http:Response response = check assetClient->delete("/assets/" + assetTag + "/components/" + compId);
+    handleResponse(response, "Component removed", "Could not remove component");
+}
     
 
 
