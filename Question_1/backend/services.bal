@@ -44,7 +44,23 @@ function generateAssetTag(string institution, string site, string name) returns 
     return institutionCode + "-" + siteCode + "-" + assetCode + "-" + number;
 }
 
+<<<<<<< HEAD
 
+=======
+function successResponse(int statusCode, string message) returns http:Response{
+    http:Response res = new;
+    res.statusCode = statusCode;
+    res.setPayload({message:message});
+    return res;
+}
+
+function errorResponse(int statusCode, string message) returns http:Response{
+    http:Response res = new;
+    res.statusCode = statusCode;
+    res.setPayload({message:message});
+    return res;
+}
+>>>>>>> david-branch
 
 service /assets on new http:Listener(8080) {
 
@@ -173,6 +189,7 @@ service /assets on new http:Listener(8080) {
         return successResponse(200, "Asset updated");
     }
 
+<<<<<<< HEAD
     resource function post [string assetTag]/components(@http:Payload Component component) returns http:Response {
         Asset? asset = assets[assetTag];
         if asset is Asset {
@@ -213,6 +230,8 @@ service /assets on new http:Listener(8080) {
         }
     }
 
+=======
+>>>>>>> david-branch
     resource function post loans(@http:Payload Loan loan) returns http:Response {
         Asset? asset = assets[loan.assetTag];
         if asset is Asset {
@@ -350,7 +369,11 @@ service /assets on new http:Listener(8080) {
             io:println("Work order creation failed: asset ", assetTag, " not found");
             return errorResponse(404, "Asset not found");
         }
+<<<<<<< HEAD
     }        
+=======
+    }
+>>>>>>> david-branch
     resource function put [string assetTag]/workorders/[string orderId](@http:Payload WorkOrder updatedOrder) returns http:Response {
         Asset? asset = assets[assetTag];
         if asset is Asset {
@@ -376,7 +399,11 @@ service /assets on new http:Listener(8080) {
             return errorResponse(404, "Asset not found");
         }
     }
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> david-branch
     resource function patch [string assetTag]/workorders/[string orderId]/close() returns http:Response {
         Asset? asset = assets[assetTag];
         if asset is Asset {
