@@ -76,4 +76,50 @@ function stripSpaces(string input) returns string {
         self.properties[propertyId] = newProperty;
         return {property_id: propertyId};
     }
+
+    remote function update_property(UpdatePropertyRequest value) returns UpdatePropertyResponse|error {
+        Property? existingProperty = self.properties[value.property_id];
+        if existingProperty is Property {
+            Property updatedProperty = {
+                property_id: existingProperty.property_id,
+                host_id: existingProperty.host_id,
+                property_name: value.property_name,
+                location: value.location,
+                property_type: value.property_type,
+                price_per_night: value.price_per_night,
+                status: value.status
+            };
+            self.properties[value.property_id] = updatedProperty;
+            return {message: "Property updated successfully", success: true};
+        }
+        return {message: "Property not found", success: false};
+    }
+
+    remote function remove_property(RemovePropertyRequest value) returns RemovePropertyResponse|error {
+        Property? property = self.properties[value.property_id];
+        if property is Property {
+            if property.host_id != value.host_id {
+                return {
+                    message: "You are not authorized to remove this property",
+                    properties: []
+                };
+            }
+
+            _ = self.properties.remove(value.property_id);
+
+            Property[] remainingProperties = [];
+            foreach Property remainingProperty in self.properties {
+                if remainingProperty.host_id == value.host_id {
+                    remainingProperties.push(remainingProperty);
+                }
+            }
+            return {
+                message: "Property removed successfully",
+                properties: remainingProperties
+            };
+        }
+        return {message: "Property not found", properties: []};
+    }
+
+    }
 }
