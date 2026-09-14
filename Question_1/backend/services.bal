@@ -172,6 +172,46 @@ service /assets on new http:Listener(8080) {
         return successResponse(200, "Asset updated");
     }
 
+    resource function post [string assetTag]/components(@http:Payload Component component) returns http:Response {
+        Asset? asset = assets[assetTag];
+        if asset is Asset {
+            component.compId = "CMP-" + time:utcToString(time:utcNow());
+            asset.components.push(component);
+            assets.put(asset);
+
+            io:println("Component ", component.compId, " added to asset ", assetTag);
+            return successResponse(201, "Component added successfully");
+        } else {
+            io:println("Component creation failed: asset ", assetTag, " not found");
+            return errorResponse(404, "Asset not found");
+        }
+    }
+
+    resource function delete [string assetTag]/components/[string compId]() returns http:Response {
+        Asset? asset = assets[assetTag];
+        if asset is Asset {
+            int idx = -1;
+            foreach int i in 0 ..< asset.components.length() {
+                if asset.components[i].compId == compId {
+                    idx = i;
+                    break;
+                }
+            }
+            if idx == -1 {
+                io:println("Component removal failed: ", compId, " not found on asset ", assetTag);
+                return errorResponse(404, "Component not found");
+            }
+            _ = asset.components.remove(idx);
+            assets.put(asset);
+
+            io:println("Component ", compId, " removed from asset ", assetTag);
+            return successResponse(200, "Component removed successfully");
+        } else {
+            io:println("Component removal failed: asset ", assetTag, " not found");
+            return errorResponse(404, "Asset not found");
+        }
+    }
+
     resource function post loans(@http:Payload Loan loan) returns http:Response {
         Asset? asset = assets[loan.assetTag];
         if asset is Asset {
