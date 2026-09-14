@@ -120,6 +120,80 @@ function stripSpaces(string input) returns string {
         }
         return {message: "Property not found", properties: []};
     }
-
+remote function search_property(SearchPropertyRequest value) returns SearchPropertyResponse|error {
+        Property? property = self.properties[value.property_id];
+        if property is Property {
+            if property.status == "AVAILABLE" {
+                return {status: "Available", property: property};
+            }
+            return {status: "Not Available"};
+        }
+        return {status: "Property Not Found"};
     }
-}
+
+    remote function book_property(BookPropertyRequest value) returns BookPropertyResponse|error {
+        Property? property = self.properties[value.property_id];
+        if property is Property {
+            if property.status != "AVAILABLE" {
+                return {message: "Property is not available", success: false};
+            }
+            if value.check_in >= value.check_out {
+                return {
+                    message: "Check-out date must be after check-in date",
+                    success: false
+                };
+            }
+            self.bookingCart[value.guest_id] = value;
+            return {message: "Property added to booking cart", success: true};
+        }
+        return {message: "Property not found", success: false};
+    }
+
+    remote function confirm_booking(ConfirmBookingRequest value) returns ConfirmBookingResponse|error {
+        BookPropertyRequest? request = self.bookingCart[value.guest_id];
+        if request is BookPropertyRequest {
+            Property? property = self.properties[request.property_id];
+            if property is Property {
+                if property.status != "AVAILABLE" {
+                    return {message: "Property is no longer available"};
+                }
+
+                int numberOfNights = check calculateNights(request.check_in, request.check_out);
+                if numberOfNights <= 0 {
+                    return {message: "Invalid booking dates"};
+                }
+
+                foreach Booking booking in self.bookings {
+                    if booking.property_id == request.property_id &&
+                        booking.status == "CONFIRMED" &&
+                        request.check_in < booking.check_out &&
+                        request.check_out > booking.check_in {
+                        return {message: "Property is already booked for these dates"};
+                    }
+                }
+
+                string bookingId = self.generateBookingId();
+                float totalCost = property.price_per_night * <float>numberOfNights;
+
+                Booking newBooking = {
+                    booking_id: bookingId,
+                    property_id: request.property_id,
+                    guest_id: request.guest_id,
+                    check_in: request.check_in,
+                    check_out: request.check_out,
+                    number_of_nights: numberOfNights,
+                    total_cost: totalCost,
+                    status: "CONFIRMED"
+                };
+                self.bookings[bookingId] = newBooking;
+                _ = self.bookingCart.remove(value.guest_id);
+                return {
+                    message: "Booking confirmed successfully",
+                    booking: newBooking
+                };
+            }
+            return {message: "Property not found"};
+        }
+        return {message: "No booking found in cart"};
+    }
+    }
