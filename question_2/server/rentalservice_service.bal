@@ -51,5 +51,15 @@ function stripSpaces(string input) returns string {
             count += 1;
         }
     }
+        function generateBookingId() returns string {
+        int count = self.bookings.length() + 1;
+        while true {
+            string bookingId = "BOOK-" + count.toString();
+            if !self.bookings.hasKey(bookingId) {
+                return bookingId;
+            }
+            count += 1;
+        }
+    }
     
 }
