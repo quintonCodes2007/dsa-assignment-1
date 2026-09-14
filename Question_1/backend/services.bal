@@ -370,7 +370,7 @@ service /assets on new http:Listener(8080) {
             return errorResponse(404, "Asset not found");
         }
 <<<<<<< HEAD
-    }        
+    }
 =======
     }
 >>>>>>> david-branch
@@ -400,7 +400,7 @@ service /assets on new http:Listener(8080) {
         }
     }
 <<<<<<< HEAD
-    
+
 =======
 
 >>>>>>> david-branch
