@@ -87,7 +87,6 @@ public function main() returns error? {
         handleResponse(response, "Schedule removed", "Could not remove schedule");
     }
 
-<<<<<<< HEAD
 // ================= COMPONENT MENU =================
 
 function componentMenu(http:Client assetClient) returns error? {
@@ -128,9 +127,5 @@ function deleteComponent(http:Client assetClient) returns error? {
     http:Response response = check assetClient->delete("/assets/" + assetTag + "/components/" + compId);
     handleResponse(response, "Component removed", "Could not remove component");
 }
-=======
-
->>>>>>> david-branch
     
-
 
