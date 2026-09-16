@@ -211,40 +211,41 @@ service /assets on new http:Listener(8080) {
     // ===== Components =====
     resource function post [string assetTag]/components(@http:Payload Component component) returns http:Response {
         Asset? asset = assets[assetTag];
+
         if asset is Asset {
-            component.compId = "CMP-" + time:utcToString(time:utcNow());
-            asset.components.push(component);
+            schedule.scheduleId = "SCH-" + time:utcToString(time:utcNow());
+            asset.schedules.push(schedule);
             assets.put(asset);
 
-            io:println("Component ", component.compId, " added to asset ", assetTag);
-            return successResponse(201, "Component added successfully");
+            io:println("Schedule ", schedule.scheduleId, " added to asset ", assetTag);
+            return successResponse(201, "Schedule added successfully");
         } else {
-            io:println("Component creation failed: asset ", assetTag, " not found");
+            io:println("Schedule creation failed: asset ", assetTag, " not found");
             return errorResponse(404, "Asset not found");
         }
     }
 
-    resource function delete [string assetTag]/components/[string compId]() returns http:Response {
+    resource function delete [string assetTag]/schedules/[string scheduleId]() returns http:Response {
         Asset? asset = assets[assetTag];
         if asset is Asset {
             int idx = -1;
-            foreach int i in 0 ..< asset.components.length() {
-                if asset.components[i].compId == compId {
+            foreach int i in 0 ..< asset.schedules.length() {
+                if asset.schedules[i].scheduleId == scheduleId {
                     idx = i;
                     break;
                 }
             }
             if idx == -1 {
-                io:println("Component removal failed: ", compId, " not found on asset ", assetTag);
-                return errorResponse(404, "Component not found");
+                io:println("Schedule removal failed: ", scheduleId, " not found on asset ", assetTag);
+                return errorResponse(404, "Schedule not found");
             }
-            _ = asset.components.remove(idx);
+            _ = asset.schedules.remove(idx);
             assets.put(asset);
 
-            io:println("Component ", compId, " removed from asset ", assetTag);
-            return successResponse(200, "Component removed successfully");
+            io:println("Schedule ", scheduleId, " removed from asset ", assetTag);
+            return successResponse(200, "Schedule removed successfully");
         } else {
-            io:println("Component removal failed: asset ", assetTag, " not found");
+            io:println("Schedule removal failed: asset ", assetTag, " not found");
             return errorResponse(404, "Asset not found");
         }
     }
