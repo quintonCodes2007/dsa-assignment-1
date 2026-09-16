@@ -8,7 +8,7 @@ final regexp:RegExp SPACE_REGEX = re `\s+`;
 function createCode(string value) returns string {
     string cleaned = value.toUpperAscii();
     cleaned = SPACE_REGEX.replaceAll(cleaned, "");
-
+    cleaned = cleaned.substring(0, 3);
     if cleaned.length() >= 3 {
         return cleaned.substring(0, 4);
     }
@@ -116,21 +116,24 @@ service /assets on new http:Listener(8080) {
             return errorResponse(404, "Asset not found");
         }
 
-        Asset newAsset = {
-            assetTag: assetTag,
-            name: updatedAsset.name,
-            description: updatedAsset.description,
-            institution: updatedAsset.institution,
-            site: updatedAsset.site,
-            status: updatedAsset.status,
-            dateAcquired: updatedAsset.dateAcquired,
-            components: updatedAsset.components,
-            schedules: updatedAsset.schedules,
-            workOrders: updatedAsset.workOrders
-        };
-        assets.put(newAsset);
+        Asset existing = assets.get(assetTag);
 
-        io:println("Asset ", newAsset.name, " updated with tag ", assetTag);
+        Asset updated = {
+            assetTag: assetTag,
+            name: updatedAsset.name != "" ? updatedAsset.name : existing.name,
+            description: updatedAsset.description != "" ? updatedAsset.description : existing.description,
+            institution: updatedAsset.institution != "" ? updatedAsset.institution : existing.institution,
+            site: updatedAsset.site != "" ? updatedAsset.site : existing.site,
+            status: updatedAsset.status != "" ? updatedAsset.status : existing.status,
+            dateAcquired: updatedAsset.dateAcquired != "" ? updatedAsset.dateAcquired : existing.dateAcquired,
+            components: existing.components,
+            schedules: existing.schedules,
+            workOrders: existing.workOrders
+        };
+
+        assets.put(updated);
+
+        io:println("Asset with tag ", assetTag, " updated");
         return successResponse(200, "Asset updated");
     }
 
@@ -251,12 +254,11 @@ service /assets on new http:Listener(8080) {
         Asset? asset = assets[assetTag];
         if asset is Asset {
             workOrder.orderId = "WO-" + time:utcToString(time:utcNow());
-            workOrder.status = "OPEN";
             asset.workOrders.push(workOrder);
             assets.put(asset);
 
-            io:println("Work order ", workOrder.orderId, " created for asset ", assetTag);
-            return successResponse(201, "Work order created successfully");
+            io:println("Work order ", workOrder.orderId, " added to asset ", assetTag);
+            return successResponse(201, "Work order added successfully");
         } else {
             io:println("Work order creation failed: asset ", assetTag, " not found");
             return errorResponse(404, "Asset not found");
